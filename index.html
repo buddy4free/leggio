@@ -173,7 +173,7 @@ kbd { font-family: var(--f-mono); font-size: .75rem; border: 1px solid var(--lin
       <label><input type="checkbox" id="sShowGuide"> Mostra linea</label>
       <label><input type="checkbox" id="sCount"> Conto alla rovescia</label>
       <label><input type="checkbox" id="sDim"> Scurisci le parole già lette</label>
-      <label><input type="checkbox" id="sHeard"> Mostra cosa sente</label>
+      <label><input type="checkbox" id="sHeard"> Mostra le parole che sente</label>
     </div>
     <div class="keys"><kbd>Spazio</kbd> avvia/pausa · <kbd>V</kbd> voce / automatico · <kbd>↑</kbd><kbd>↓</kbd> velocità · <kbd>PagSu</kbd><kbd>PagGiù</kbd> <kbd>←</kbd><kbd>→</kbd> salta · <kbd>+</kbd><kbd>−</kbd> dimensione · <kbd>M</kbd> specchio · <kbd>Home</kbd> dall'inizio · <kbd>Esc</kbd> esci</div>
     <button class="btn" type="button" data-close="settings">Chiudi</button>
@@ -239,7 +239,7 @@ kbd { font-family: var(--f-mono); font-size: .75rem; border: 1px solid var(--lin
   const DEFAULTS = { speed: 5, size: 64, line: 1.45, width: 86, guidePos: 0.33, mirror: false, flip: false, showGuide: true, countdown: true, dim: true, heard: true, mode: "voice" };
   const S = Object.assign({}, DEFAULTS, store.get("leggio.settings", {}));
   const saveS = () => store.set("leggio.settings", S);
-  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const SR = window.webkitSpeechRecognition || window.SpeechRecognition;
   if (!SR) S.mode = "auto";
 
   const SAMPLE = "[ESEMPIO] Questo è un testo di prova.\n\nPremi AVVIA e comincia a leggere ad alta voce. Il testo segue la tua voce: se rallenti rallenta, se ti fermi si ferma.\n\nSe salti una frase o torni indietro, il teleprompter prova a ritrovare il punto in cui sei.\n\n[PAUSA]\n\nLe indicazioni tra parentesi quadre non vanno lette: il teleprompter le salta.\n\nQuando usi il tablet sotto un vetro teleprompter, attiva lo specchio orizzontale e il riflesso tornerà leggibile.";
@@ -460,32 +460,60 @@ kbd { font-family: var(--f-mono); font-size: .75rem; border: 1px solid var(--lin
   }
   function resetRead() { W.forEach(w => w.el.classList.remove("done", "here")); V.pos = -1; V.marked = -1; }
 
+  // Status line under the controls: always shows what the recognizer is doing
+  function voiceStatus(msg, live) { $("heard").innerHTML = (live ? '<span class="dot"></span>' : "") + esc(msg); }
+  const VOICE_ERR = {
+    "not-allowed": "Microfono negato: in Chrome tocca il lucchetto accanto all'indirizzo → Autorizzazioni → Microfono → Consenti.",
+    "service-not-allowed": "Il servizio vocale del tablet non è disponibile per Chrome. Installa o aggiorna l'app Google e “Servizi di riconoscimento vocale di Google” dal Play Store.",
+    "language-not-supported": "Il servizio vocale non ha l'italiano. Impostazioni Android → Sistema → Lingua → Riconoscimento vocale: scegli Google e aggiungi l'italiano.",
+    "audio-capture": "Nessun microfono disponibile: chiudi le altre app che usano il microfono (fotocamera, registratore) e riprova.",
+    "network": "Il servizio vocale non raggiunge internet. Controlla la connessione."
+  };
+  const FATAL = ["not-allowed", "service-not-allowed", "language-not-supported", "audio-capture"];
+
+  function makeRec() {
+    const r = new SR();
+    r.lang = "it-IT"; r.continuous = V.continuous; r.interimResults = true; r.maxAlternatives = 1;
+    r.onstart = () => voiceStatus("Microfono acceso, parla pure…", true);
+    r.onspeechstart = () => voiceStatus("Ti sento…", true);
+    r.onresult = (e) => {
+      V.gotResult = true; V.emptyEnds = 0;
+      let txt = "";
+      for (let i = Math.max(0, e.results.length - 3); i < e.results.length; i++) txt += " " + e.results[i][0].transcript;
+      const sp = txt.split(/\s+/).map(norm).filter(Boolean).slice(-8);
+      voiceStatus(S.heard ? txt.trim().split(/\s+/).slice(-10).join(" ") : "Ti sento…", true);
+      locate(sp);
+    };
+    r.onerror = (e) => {
+      V.lastErr = e.error;
+      if (FATAL.includes(e.error)) { V.on = false; stopAll(); setReady(VOICE_ERR[e.error]); voiceStatus("Errore: " + e.error); }
+      else if (e.error === "network") voiceStatus(VOICE_ERR.network);
+      else if (e.error === "no-speech") voiceStatus("Non sento la voce: parla più vicino al tablet.", true);
+    };
+    r.onend = () => {
+      if (!V.on) return;
+      // Some Android builds end continuous sessions at once without results: fall back to short sessions
+      if (!V.gotResult) {
+        V.emptyEnds++;
+        if (V.emptyEnds === 3 && V.continuous) { V.continuous = false; }
+        if (V.emptyEnds === 8) voiceStatus("Il riconoscimento non restituisce parole" + (V.lastErr ? " (" + V.lastErr + ")" : "") + ". Controlla che l'app Google sia installata e aggiornata.", true);
+      }
+      V.gotResult = false;
+      setTimeout(() => { if (V.on) { try { V.rec = makeRec(); V.rec.start(); } catch (err) { voiceStatus("Non riesco a riavviare il microfono: " + err.message); } } }, 250);
+    };
+    return r;
+  }
   function startVoice() {
     if (!SR) { setReady("Questo browser non riconosce la voce: usa Chrome su Android."); return false; }
-    if (!V.rec) {
-      const r = new SR();
-      r.lang = "it-IT"; r.continuous = true; r.interimResults = true; r.maxAlternatives = 1;
-      r.onresult = (e) => {
-        let txt = "";
-        for (let i = Math.max(0, e.results.length - 3); i < e.results.length; i++) txt += " " + e.results[i][0].transcript;
-        const sp = txt.split(/\s+/).map(norm).filter(Boolean).slice(-8);
-        if (S.heard) $("heard").innerHTML = '<span class="dot"></span>' + esc(txt.trim().split(/\s+/).slice(-10).join(" "));
-        locate(sp);
-      };
-      r.onerror = (e) => {
-        if (e.error === "not-allowed" || e.error === "service-not-allowed") { V.on = false; stopAll(); setReady("Microfono negato. Consenti il microfono a questo sito nelle impostazioni di Chrome e riprova."); }
-        else if (e.error === "network") { setReady("Il riconoscimento vocale ha bisogno di internet."); }
-        else if (e.error === "audio-capture") { V.on = false; stopAll(); setReady("Nessun microfono disponibile."); }
-      };
-      r.onend = () => { if (V.on) setTimeout(() => { if (V.on) try { r.start(); } catch {} }, 150); };
-      V.rec = r;
-    }
-    V.on = true;
-    try { V.rec.start(); } catch {}
-    if (S.heard) $("heard").innerHTML = '<span class="dot"></span>In ascolto…';
+    if (V.on) return true;
+    V.on = true; V.gotResult = false; V.emptyEnds = 0; V.lastErr = "";
+    if (V.continuous === undefined) V.continuous = true;
+    voiceStatus("Accendo il microfono…", true);
+    try { V.rec = makeRec(); V.rec.start(); }
+    catch (err) { V.on = false; voiceStatus("Non riesco ad accendere il microfono: " + err.message); return false; }
     return true;
   }
-  function stopVoice() { V.on = false; try { V.rec && V.rec.stop(); } catch {} $("heard").textContent = ""; }
+  function stopVoice() { V.on = false; try { V.rec && V.rec.abort(); } catch {} voiceStatus(""); }
 
   /* ---------------- Prompter engine ---------------- */
   const stage = $("stage"), mirror = $("mirror"), content = $("content");
@@ -535,7 +563,7 @@ kbd { font-family: var(--f-mono); font-size: .75rem; border: 1px solid var(--lin
     $("modeVoice").setAttribute("aria-pressed", String(S.mode === "voice"));
     $("modeAuto").setAttribute("aria-pressed", String(S.mode === "auto"));
     $("speedGrp").hidden = S.mode === "voice";
-    $("heard").hidden = !(S.heard && S.mode === "voice");
+    $("heard").hidden = S.mode !== "voice";
     syncForm(); clamp(); render();
   }
   const clamp = () => { P.offset = Math.min(Math.max(0, P.offset), maxOffset()); };
