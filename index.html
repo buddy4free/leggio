@@ -72,7 +72,8 @@ textarea { width: 100%; min-height: 40vh; background: var(--panel); border: 1px 
 #content .end { text-align: center; color: var(--mute); font-family: var(--f-ui); letter-spacing: .2em; text-transform: uppercase; font-size: .6em; }
 #content .w.done { color: var(--done); }
 #content.novoice .w.done { color: inherit; }
-#content .w.here { color: var(--cue); }
+#content .w.next { color: var(--cue); }
+#content.novoice .w.next { color: inherit; }
 #guide { position: absolute; left: 0; right: 0; height: 0; border-top: 2px solid rgba(242,179,61,.55); pointer-events: none; }
 #guide::before, #guide::after { content: ""; position: absolute; top: -9px; border: 8px solid transparent; }
 #guide::before { left: 0; border-left: 12px solid var(--cue); }
@@ -417,7 +418,7 @@ kbd { font-family: var(--f-mono); font-size: .75rem; border: 1px solid var(--lin
   }
 
   /* ---------------- Voice tracking ---------------- */
-  const V = { rec: null, on: false, pos: -1, marked: -1, lastHit: 0, rate: 0, vi: -1 };
+  const V = { rec: null, on: false, pos: -1, marked: -1, nf: 0, nt: -1, lastHit: 0, rate: 0, vi: -1 };
   function lev1(a, b) { // true when edit distance <= 1
     if (Math.abs(a.length - b.length) > 1) return false;
     let i = 0, j = 0, d = 0;
@@ -470,15 +471,28 @@ kbd { font-family: var(--f-mono); font-size: .75rem; border: 1px solid var(--lin
       V.pos = hit.j; V.lastHit = now; markRead();
     }
   }
+  // Upcoming phrase: from the next word to the next comma/full stop (3 to 10 words, same paragraph)
+  function nextPhrase(from) {
+    if (from >= W.length) return [from, from - 1];
+    const block = W[from].el.closest("p, h4");
+    let end = from;
+    while (end < W.length - 1 && end - from < 9) {
+      if (end - from >= 2 && /[.,;:!?…]["”»)]*$/.test(W[end].el.textContent)) break;
+      if (W[end + 1].el.closest("p, h4") !== block) break;
+      end++;
+    }
+    return [from, end];
+  }
   function markRead() {
     const to = V.pos;
-    if (V.marked >= 0 && W[V.marked]) W[V.marked].el.classList.remove("here");
     if (to > V.marked) for (let i = Math.max(0, V.marked); i <= to; i++) W[i].el.classList.add("done");
-    else for (let i = to + 1; i <= V.marked; i++) W[i].el.classList.remove("done");
-    if (W[to]) W[to].el.classList.add("here");
+    else for (let i = to + 1; i <= V.marked; i++) W[i] && W[i].el.classList.remove("done");
     V.marked = to;
+    for (let i = V.nf; i <= V.nt; i++) W[i] && W[i].el.classList.remove("next");
+    [V.nf, V.nt] = nextPhrase(to + 1);
+    for (let i = V.nf; i <= V.nt; i++) W[i].el.classList.add("next");
   }
-  function resetRead() { W.forEach(w => w.el.classList.remove("done", "here")); V.pos = -1; V.marked = -1; V.vi = -1; V.lastHit = 0; V.rate = 0; }
+  function resetRead() { W.forEach(w => w.el.classList.remove("done", "next")); V.pos = -1; V.marked = -1; V.nf = 0; V.nt = -1; V.vi = -1; V.lastHit = 0; V.rate = 0; markRead(); }
 
   // Status line under the controls: always shows what the recognizer is doing
   function voiceStatus(msg, live) { $("heard").innerHTML = (live ? '<span class="dot"></span>' : "") + esc(msg); }
@@ -714,7 +728,7 @@ kbd { font-family: var(--f-mono); font-size: .75rem; border: 1px solid var(--lin
   $("editBtn").onclick = () => { stopAll(); $("editText").value = T.text; openSheet("editSheet"); };
   document.querySelectorAll("[data-close]").forEach(b => b.onclick = () => { $(b.dataset.close).hidden = true; });
   $("editGo").onclick = () => {
-    T.text = $("editText").value; content.innerHTML = toHtml(T.text); wrapWords();
+    T.text = $("editText").value; content.innerHTML = toHtml(T.text); wrapWords(); V.marked = -1; V.nf = 0; V.nt = -1;
     $("editSheet").hidden = true; applyStyle(); anchorToLine();
   };
   $("fsBtn").onclick = () => {
