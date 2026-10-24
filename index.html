@@ -124,16 +124,20 @@ kbd { font-family: var(--f-mono); font-size: .75rem; border: 1px solid var(--lin
   <div id="status" class="notice" hidden></div>
 
   <div id="setup" class="setup" hidden>
-    <h2>Collega Trello (una volta sola)</h2>
-    <ol>
-      <li>Apri <a href="https://trello.com/power-ups/admin" target="_blank" rel="noopener">trello.com/power-ups/admin</a>, premi <b>Nuovo</b> e crea un Power-Up qualsiasi (nome: <i>Leggio</i>, il tuo spazio di lavoro, la tua email nei campi obbligatori; l'URL del connettore iframe puoi lasciarlo vuoto).</li>
-      <li>Nella pagina del Power-Up apri <b>Chiave API</b>, premi <b>Genera una nuova chiave API</b> e copia la <b>Chiave API</b> qui sotto.
-        <input type="text" id="kKey" placeholder="Chiave API (32 caratteri)" autocomplete="off" spellcheck="false"></li>
-      <li>Premi <button class="btn" type="button" id="authBtn">Ottieni il token</button>: Trello ti chiede di consentire l'accesso e poi mostra un <b>token</b>. Copialo e incollalo qui.
-        <input type="password" id="kToken" placeholder="Token" autocomplete="off" spellcheck="false"></li>
-    </ol>
-    <div class="muted" style="font-size:.88rem">Chiave e token restano salvati solo in questo browser, sul tuo tablet.</div>
-    <div class="row"><button class="btn primary" id="saveKeys" type="button">Collega</button><button class="btn" id="forget" type="button">Scollega</button><button class="btn" id="setupClose" type="button">Chiudi</button></div>
+    <h2>Collega Trello</h2>
+    <div>Premi <b>Collega Trello</b>, poi su Trello premi <b>Consenti</b>: tornerai qui già collegato. Va fatto una volta per ogni dispositivo.</div>
+    <div class="row"><button class="btn primary" id="oneTap" type="button">Collega Trello</button><button class="btn" id="forget" type="button">Scollega</button><button class="btn" id="setupClose" type="button">Chiudi</button></div>
+    <details>
+      <summary class="muted">Collegamento manuale (se quello automatico non funziona)</summary>
+      <ol style="margin-top:10px">
+        <li>Chiave API (già inserita):
+          <input type="text" id="kKey" placeholder="Chiave API (32 caratteri)" autocomplete="off" spellcheck="false"></li>
+        <li>Premi <button class="btn" type="button" id="authBtn">Ottieni il token</button>, consenti l'accesso, copia il <b>token</b> che Trello mostra e incollalo qui.
+          <input type="password" id="kToken" placeholder="Token" autocomplete="off" spellcheck="false"></li>
+      </ol>
+      <div class="row" style="margin-top:10px"><button class="btn" id="saveKeys" type="button">Collega con il token</button></div>
+    </details>
+    <div class="muted" style="font-size:.88rem">Il collegamento resta salvato solo in questo browser.</div>
   </div>
 
   <div id="pickers" class="row" hidden>
@@ -248,6 +252,7 @@ kbd { font-family: var(--f-mono); font-size: .75rem; border: 1px solid var(--lin
   let K = store.get("leggio.trello", null); // {key, token}
   const T = { boards: [], boardId: null, lists: [], listId: null, cards: [], card: null, text: "" };
   const API = "https://api.trello.com/1";
+  const APP_KEY = "b5b3aa051be29ea8fc1b1db363a542dc"; // public API key of the Leggio Power-Up (not a secret)
 
   async function trello(path, params = {}, method = "GET") {
     const q = new URLSearchParams(Object.assign({}, params, { key: K.key, token: K.token }));
@@ -341,10 +346,15 @@ kbd { font-family: var(--f-mono); font-size: .75rem; border: 1px solid var(--lin
   // Setup panel
   function showSetup(on) {
     $("setup").hidden = !on;
-    if (on) { $("kKey").value = K ? K.key : ""; $("kToken").value = K ? K.token : ""; }
+    if (on) { $("kKey").value = K ? K.key : APP_KEY; $("kToken").value = K ? K.token : ""; }
   }
   $("setupBtn").onclick = () => showSetup($("setup").hidden);
   $("setupClose").onclick = () => showSetup(false);
+  // One-tap: Trello sends the token back to this page as #token=...
+  $("oneTap").onclick = () => {
+    const back = location.origin + location.pathname;
+    location.href = `https://trello.com/1/authorize?expiration=never&name=Leggio&scope=read,write&response_type=token&callback_method=fragment&return_url=${encodeURIComponent(back)}&key=${APP_KEY}`;
+  };
   $("authBtn").onclick = () => {
     const key = $("kKey").value.trim();
     if (!/^[0-9a-f]{32}$/i.test(key)) { setStatus("Incolla prima la Chiave API (32 caratteri) al passo 2.", "err"); return; }
@@ -745,6 +755,14 @@ kbd { font-family: var(--f-mono); font-size: .75rem; border: 1px solid var(--lin
   // Boot
   if (!window.isSecureContext) setStatus("Apri questa pagina da un indirizzo https: altrimenti il microfono non funziona.", "err");
   else if (!SR) setStatus("Questo browser non riconosce la voce. Su Android usa Chrome; intanto funziona lo scorrimento automatico.", "err");
+  const back = /[#&]token=([^&]+)/.exec(location.hash);
+  if (back) {
+    K = { key: APP_KEY, token: decodeURIComponent(back[1]) }; store.set("leggio.trello", K);
+    history.replaceState(null, "", location.pathname + location.search);
+  } else if (/[#&]error=/.test(location.hash)) {
+    setStatus("Trello non ha dato l'accesso. Premi Collega Trello e scegli Consenti.", "err");
+    history.replaceState(null, "", location.pathname + location.search);
+  }
   if (K) loadBoards();
   else { sampleList(); showSetup(true); }
 })();
