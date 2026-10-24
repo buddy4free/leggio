@@ -1,0 +1,725 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0b0c0e">
+<meta name="mobile-web-app-capable" content="yes">
+<title>Leggio Voce</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Barlow+Condensed:wght@500;600;700&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Studio monitor: library column + full-screen black stage with reading line. Dark only by choice. */
+:root {
+  --ink: #0b0c0e; --panel: #15171b; --line: #2a2e35; --text: #eceae4; --mute: #8c919a;
+  --done: #4d525a; --cue: #f2b33d; --tally: #e5484d; --ok: #46a758;
+  --f-script: "Atkinson Hyperlegible", Verdana, system-ui, sans-serif;
+  --f-ui: "Barlow Condensed", "Arial Narrow", system-ui, sans-serif;
+  --f-mono: "JetBrains Mono", ui-monospace, monospace;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body { background: var(--ink); color: var(--text); font-family: var(--f-script); font-size: 15px; -webkit-tap-highlight-color: transparent; }
+[hidden] { display: none !important; }
+button, select, input, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+a { color: var(--cue); }
+:focus-visible { outline: 2px solid var(--cue); outline-offset: 2px; }
+
+#lib { max-width: 980px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: calc(20px + env(safe-area-inset-top, 0px)) 48px; display: grid; gap: 20px; }
+.top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
+.brand { display: flex; align-items: center; gap: 10px; font-family: var(--f-ui); font-weight: 700; font-size: 1.7rem; letter-spacing: .02em; text-transform: uppercase; }
+.tally { width: 12px; height: 12px; border-radius: 50%; background: var(--tally); box-shadow: 0 0 12px var(--tally); }
+.brand small { font-weight: 500; color: var(--mute); font-size: .95rem; letter-spacing: .08em; }
+.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.label { font-family: var(--f-ui); text-transform: uppercase; letter-spacing: .1em; font-size: .8rem; color: var(--mute); }
+select, .btn, input[type=text], input[type=password] { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; min-height: 40px; }
+.btn { font-family: var(--f-ui); font-weight: 600; font-size: 1rem; letter-spacing: .04em; text-transform: uppercase; display: inline-flex; align-items: center; gap: 6px; text-decoration: none; color: var(--text); }
+.btn:hover { border-color: var(--mute); }
+.btn.primary { background: var(--cue); color: #1a1405; border-color: var(--cue); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { font-family: var(--f-ui); font-weight: 600; font-size: 1rem; padding: 6px 12px; border-radius: 999px; border: 1px solid var(--line); background: transparent; }
+.chip[aria-pressed="true"] { background: var(--text); color: var(--ink); border-color: var(--text); }
+.notice { border: 1px solid var(--line); border-left: 3px solid var(--cue); background: var(--panel); padding: 12px 14px; border-radius: 6px; font-size: .95rem; line-height: 1.45; }
+.notice.err { border-left-color: var(--tally); }
+.cards { display: grid; gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.card { display: grid; grid-template-columns: 1fr auto; gap: 4px 16px; align-items: baseline; background: var(--ink); padding: 14px 16px; text-align: left; border: 0; width: 100%; }
+.card:hover { background: var(--panel); }
+.card h3 { margin: 0; font-size: 1.08rem; font-weight: 700; min-width: 0; }
+.card .meta { font-family: var(--f-mono); font-size: .8rem; color: var(--mute); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.card p { grid-column: 1 / -1; margin: 0; color: var(--mute); font-size: .9rem; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; min-width: 0; }
+.card.empty h3 { color: var(--mute); font-weight: 400; }
+.badge { font-family: var(--f-ui); font-size: .78rem; letter-spacing: .08em; text-transform: uppercase; color: var(--cue); border: 1px solid var(--cue); border-radius: 4px; padding: 0 5px; margin-left: 6px; }
+.muted { color: var(--mute); }
+textarea { width: 100%; min-height: 40vh; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 12px; line-height: 1.5; resize: vertical; }
+.spin { display: inline-block; width: 14px; height: 14px; border: 2px solid var(--line); border-top-color: var(--cue); border-radius: 50%; animation: sp .8s linear infinite; vertical-align: -2px; }
+@keyframes sp { to { transform: rotate(360deg); } }
+.setup { display: grid; gap: 14px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 18px; line-height: 1.5; }
+.setup h2 { margin: 0; font-family: var(--f-ui); text-transform: uppercase; letter-spacing: .06em; font-size: 1.3rem; }
+.setup ol { margin: 0; padding-left: 1.3em; display: grid; gap: 10px; }
+.setup input { width: 100%; font-family: var(--f-mono); font-size: .85rem; }
+
+#prompter { position: fixed; inset: 0; background: #000; z-index: 20; display: flex; flex-direction: column; }
+#stage { position: relative; flex: 1; overflow: hidden; touch-action: none; user-select: none; -webkit-user-select: none; }
+#mirror { position: absolute; inset: 0; }
+#content { position: relative; will-change: transform; margin: 0 auto; color: var(--text); }
+#content p { margin: 0 0 .9em; }
+#content strong { color: #fff; }
+#content .cue { color: var(--cue); font-family: var(--f-ui); font-weight: 600; letter-spacing: .04em; }
+#content h4 { margin: 0 0 .6em; color: var(--cue); font-size: .8em; }
+#content .end { text-align: center; color: var(--mute); font-family: var(--f-ui); letter-spacing: .2em; text-transform: uppercase; font-size: .6em; }
+#content .w.done { color: var(--done); }
+#content.novoice .w.done { color: inherit; }
+#content .w.here { color: var(--cue); }
+#guide { position: absolute; left: 0; right: 0; height: 0; border-top: 2px solid rgba(242,179,61,.55); pointer-events: none; }
+#guide::before, #guide::after { content: ""; position: absolute; top: -9px; border: 8px solid transparent; }
+#guide::before { left: 0; border-left: 12px solid var(--cue); }
+#guide::after { right: 0; border-right: 12px solid var(--cue); }
+#shade { position: absolute; inset: 0; pointer-events: none; background: linear-gradient(#000 0, transparent 14%, transparent 80%, #000 100%); }
+#progress { position: absolute; top: 0; left: 0; height: 3px; background: var(--cue); width: 0; z-index: 2; }
+#count { position: absolute; inset: 0; display: grid; place-items: center; font-family: var(--f-ui); font-weight: 700; font-size: 30vmin; color: var(--tally); pointer-events: none; background: rgba(0,0,0,.55); }
+#ready { position: absolute; left: 50%; bottom: 18px; transform: translateX(-50%); font-family: var(--f-ui); letter-spacing: .14em; text-transform: uppercase; color: var(--mute); font-size: .95rem; pointer-events: none; white-space: nowrap; }
+#bar { background: var(--panel); border-top: 1px solid var(--line); padding-block: 8px calc(8px + env(safe-area-inset-bottom, 0px)); padding-left: max(10px, env(safe-area-inset-left, 0px)); padding-right: max(10px, env(safe-area-inset-right, 0px)); display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: center; transition: opacity .3s; }
+#prompter.playing #bar { opacity: .25; }
+#prompter.playing #bar:hover, #prompter.playing #bar:focus-within { opacity: 1; }
+.grp { display: flex; align-items: center; gap: 4px; background: var(--ink); border: 1px solid var(--line); border-radius: 10px; padding: 3px; }
+.ib { min-width: 44px; height: 44px; border-radius: 8px; border: 0; background: transparent; font-family: var(--f-ui); font-weight: 700; font-size: 1.05rem; letter-spacing: .03em; padding: 0 10px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+.ib:hover { background: var(--panel); }
+.ib[aria-pressed="true"] { background: var(--text); color: var(--ink); }
+.ib.play { background: var(--tally); color: #fff; min-width: 96px; }
+.val { font-family: var(--f-mono); font-size: .85rem; min-width: 2.6em; text-align: center; font-variant-numeric: tabular-nums; }
+.vlab { font-family: var(--f-ui); font-size: .72rem; letter-spacing: .1em; text-transform: uppercase; color: var(--mute); padding-left: 6px; }
+#clock { font-family: var(--f-mono); font-size: .85rem; color: var(--mute); font-variant-numeric: tabular-nums; padding: 0 6px; white-space: nowrap; }
+#clock b { color: var(--text); font-weight: 500; }
+#heard { flex-basis: 100%; text-align: center; font-size: .85rem; color: var(--mute); min-height: 1.3em; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+#heard .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--tally); margin-right: 6px; animation: pulse 1.2s ease-in-out infinite; }
+@keyframes pulse { 50% { opacity: .3; } }
+svg.i { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.sheet { position: absolute; left: 50%; bottom: 96px; transform: translateX(-50%); width: min(480px, calc(100% - 24px)); background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px; display: grid; gap: 14px; z-index: 5; box-shadow: 0 20px 50px rgba(0,0,0,.6); max-height: 72vh; overflow: auto; }
+.sheet h2 { margin: 0; font-family: var(--f-ui); text-transform: uppercase; letter-spacing: .08em; font-size: 1.1rem; }
+.field { display: grid; grid-template-columns: 8.5em 1fr 3em; gap: 10px; align-items: center; font-size: .95rem; }
+.field output { font-family: var(--f-mono); font-size: .8rem; color: var(--mute); text-align: right; }
+.field input[type=range] { width: 100%; accent-color: var(--cue); }
+.toggles { display: flex; flex-wrap: wrap; gap: 8px; }
+.toggles label { display: inline-flex; gap: 6px; align-items: center; background: var(--ink); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; }
+.keys { font-size: .82rem; color: var(--mute); line-height: 1.6; }
+kbd { font-family: var(--f-mono); font-size: .75rem; border: 1px solid var(--line); border-radius: 4px; padding: 0 4px; color: var(--text); }
+@media (max-width: 560px) { .field { grid-template-columns: 7em 1fr 2.6em; } .hide-sm { display: none; } }
+@media (prefers-reduced-motion: reduce) { .spin, #heard .dot { animation: none; } #bar { transition: none; } }
+</style>
+</head>
+<body>
+
+<div id="lib">
+  <div class="top">
+    <div class="brand"><span class="tally" aria-hidden="true"></span>Leggio <small>voce</small></div>
+    <div class="row">
+      <button class="btn" id="pasteBtn" type="button">Incolla un testo</button>
+      <button class="btn" id="setupBtn" type="button">Trello</button>
+    </div>
+  </div>
+
+  <div id="status" class="notice" hidden></div>
+
+  <div id="setup" class="setup" hidden>
+    <h2>Collega Trello (una volta sola)</h2>
+    <ol>
+      <li>Apri <a href="https://trello.com/power-ups/admin" target="_blank" rel="noopener">trello.com/power-ups/admin</a>, premi <b>Nuovo</b> e crea un Power-Up qualsiasi (nome: <i>Leggio</i>, il tuo spazio di lavoro, la tua email nei campi obbligatori; l'URL del connettore iframe puoi lasciarlo vuoto).</li>
+      <li>Nella pagina del Power-Up apri <b>Chiave API</b>, premi <b>Genera una nuova chiave API</b> e copia la <b>Chiave API</b> qui sotto.
+        <input type="text" id="kKey" placeholder="Chiave API (32 caratteri)" autocomplete="off" spellcheck="false"></li>
+      <li>Premi <button class="btn" type="button" id="authBtn">Ottieni il token</button>: Trello ti chiede di consentire l'accesso e poi mostra un <b>token</b>. Copialo e incollalo qui.
+        <input type="password" id="kToken" placeholder="Token" autocomplete="off" spellcheck="false"></li>
+    </ol>
+    <div class="muted" style="font-size:.88rem">Chiave e token restano salvati solo in questo browser, sul tuo tablet.</div>
+    <div class="row"><button class="btn primary" id="saveKeys" type="button">Collega</button><button class="btn" id="forget" type="button">Scollega</button><button class="btn" id="setupClose" type="button">Chiudi</button></div>
+  </div>
+
+  <div id="pickers" class="row" hidden>
+    <span class="label">Board</span>
+    <select id="board" aria-label="Board Trello"></select>
+    <button class="btn" id="reload" type="button">Aggiorna</button>
+  </div>
+  <div id="lists" class="chips" role="group" aria-label="Liste"></div>
+  <div id="cards" class="cards" aria-live="polite"></div>
+
+  <div id="pasteBox" hidden>
+    <div class="label" style="margin-bottom:8px">Testo da leggere</div>
+    <textarea id="pasteText" placeholder="Incolla qui il copione. Le parti tra [parentesi quadre] diventano indicazioni di regia in giallo e non vengono ascoltate."></textarea>
+    <div class="row" style="margin-top:8px"><button class="btn primary" id="pasteGo" type="button">Apri nel teleprompter</button><button class="btn" id="pasteCancel" type="button">Annulla</button></div>
+  </div>
+</div>
+
+<div id="prompter" hidden>
+  <div id="stage" aria-label="Testo del teleprompter">
+    <div id="progress"></div>
+    <div id="mirror"><div id="content"></div></div>
+    <div id="shade"></div>
+    <div id="guide"></div>
+    <div id="ready"></div>
+    <div id="count" hidden></div>
+  </div>
+
+  <div class="sheet" id="settings" hidden>
+    <h2>Impostazioni</h2>
+    <div class="field"><label for="sSize">Dimensione</label><input id="sSize" type="range" min="24" max="160" step="2"><output id="oSize"></output></div>
+    <div class="field"><label for="sLine">Interlinea</label><input id="sLine" type="range" min="1.1" max="2.2" step="0.05"><output id="oLine"></output></div>
+    <div class="field"><label for="sWidth">Larghezza testo</label><input id="sWidth" type="range" min="40" max="100" step="2"><output id="oWidth"></output></div>
+    <div class="field"><label for="sGuide">Linea di lettura</label><input id="sGuide" type="range" min="0.15" max="0.6" step="0.01"><output id="oGuide"></output></div>
+    <div class="toggles">
+      <label><input type="checkbox" id="sMirror"> Specchio orizzontale</label>
+      <label><input type="checkbox" id="sFlip"> Capovolgi</label>
+      <label><input type="checkbox" id="sShowGuide"> Mostra linea</label>
+      <label><input type="checkbox" id="sCount"> Conto alla rovescia</label>
+      <label><input type="checkbox" id="sDim"> Scurisci le parole già lette</label>
+      <label><input type="checkbox" id="sHeard"> Mostra cosa sente</label>
+    </div>
+    <div class="keys"><kbd>Spazio</kbd> avvia/pausa · <kbd>V</kbd> voce / automatico · <kbd>↑</kbd><kbd>↓</kbd> velocità · <kbd>PagSu</kbd><kbd>PagGiù</kbd> <kbd>←</kbd><kbd>→</kbd> salta · <kbd>+</kbd><kbd>−</kbd> dimensione · <kbd>M</kbd> specchio · <kbd>Home</kbd> dall'inizio · <kbd>Esc</kbd> esci</div>
+    <button class="btn" type="button" data-close="settings">Chiudi</button>
+  </div>
+
+  <div class="sheet" id="moveSheet" hidden>
+    <h2>Sposta la scheda su Trello</h2>
+    <div class="muted" id="moveCard"></div>
+    <select id="moveDest" aria-label="Lista di destinazione"></select>
+    <div class="row"><button class="btn primary" id="moveGo" type="button">Sposta</button><button class="btn" type="button" data-close="moveSheet">Annulla</button></div>
+    <div id="moveMsg" class="muted" aria-live="polite"></div>
+  </div>
+
+  <div class="sheet" id="editSheet" hidden>
+    <h2>Modifica per questa lettura</h2>
+    <div class="muted" style="font-size:.88rem">Le modifiche valgono solo qui e non cambiano la scheda su Trello.</div>
+    <textarea id="editText" aria-label="Testo"></textarea>
+    <div class="row"><button class="btn primary" id="editGo" type="button">Usa questo testo</button><button class="btn" type="button" data-close="editSheet">Annulla</button></div>
+  </div>
+
+  <div id="bar">
+    <div class="grp">
+      <button class="ib" id="exit" type="button" title="Torna ai copioni"><svg class="i" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg><span class="hide-sm">Copioni</span></button>
+      <button class="ib" id="restart" type="button" title="Dall'inizio"><svg class="i" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg></button>
+    </div>
+    <div class="grp" role="group" aria-label="Modalità">
+      <button class="ib" id="modeVoice" type="button" aria-pressed="true"><svg class="i" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>VOCE</button>
+      <button class="ib" id="modeAuto" type="button" aria-pressed="false">AUTO</button>
+    </div>
+    <button class="ib play" id="play" type="button">AVVIA</button>
+    <div class="grp" id="speedGrp" title="Velocità">
+      <span class="vlab">Vel.</span>
+      <button class="ib" id="slower" type="button" aria-label="Più lento">−</button>
+      <span class="val" id="vSpeed"></span>
+      <button class="ib" id="faster" type="button" aria-label="Più veloce">+</button>
+    </div>
+    <div class="grp" title="Dimensione testo">
+      <span class="vlab">Aa</span>
+      <button class="ib" id="smaller" type="button" aria-label="Testo più piccolo">−</button>
+      <span class="val" id="vSize"></span>
+      <button class="ib" id="bigger" type="button" aria-label="Testo più grande">+</button>
+    </div>
+    <div class="grp">
+      <button class="ib" id="mirrorBtn" type="button" title="Specchio orizzontale" aria-pressed="false"><svg class="i" viewBox="0 0 24 24"><path d="M12 3v18"/><path d="M8 7l-5 5 5 5V7z"/><path d="M16 7l5 5-5 5V7z"/></svg></button>
+      <button class="ib" id="setBtn" type="button" title="Impostazioni"><svg class="i" viewBox="0 0 24 24"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg></button>
+      <button class="ib" id="editBtn" type="button" title="Modifica testo"><svg class="i" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>
+      <button class="ib" id="moveBtn" type="button" title="Sposta la scheda su Trello" hidden><svg class="i" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg><span class="hide-sm">Trello</span></button>
+      <button class="ib" id="fsBtn" type="button" title="Schermo intero"><svg class="i" viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+    </div>
+    <div id="clock"><b id="tEl">0:00</b> / <span id="tLeft">–</span></div>
+    <div id="heard" aria-live="off"></div>
+  </div>
+</div>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const store = {
+    get(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch { return d; } },
+    set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
+    del(k) { try { localStorage.removeItem(k); } catch {} }
+  };
+  const DEFAULTS = { speed: 5, size: 64, line: 1.45, width: 86, guidePos: 0.33, mirror: false, flip: false, showGuide: true, countdown: true, dim: true, heard: true, mode: "voice" };
+  const S = Object.assign({}, DEFAULTS, store.get("leggio.settings", {}));
+  const saveS = () => store.set("leggio.settings", S);
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) S.mode = "auto";
+
+  const SAMPLE = "[ESEMPIO] Questo è un testo di prova.\n\nPremi AVVIA e comincia a leggere ad alta voce. Il testo segue la tua voce: se rallenti rallenta, se ti fermi si ferma.\n\nSe salti una frase o torni indietro, il teleprompter prova a ritrovare il punto in cui sei.\n\n[PAUSA]\n\nLe indicazioni tra parentesi quadre non vanno lette: il teleprompter le salta.\n\nQuando usi il tablet sotto un vetro teleprompter, attiva lo specchio orizzontale e il riflesso tornerà leggibile.";
+
+  /* ---------------- Trello REST ---------------- */
+  let K = store.get("leggio.trello", null); // {key, token}
+  const T = { boards: [], boardId: null, lists: [], listId: null, cards: [], card: null, text: "" };
+  const API = "https://api.trello.com/1";
+
+  async function trello(path, params = {}, method = "GET") {
+    const q = new URLSearchParams(Object.assign({}, params, { key: K.key, token: K.token }));
+    let r;
+    try { r = await fetch(`${API}${path}?${q}`, { method }); }
+    catch { throw new Error("Nessuna connessione con Trello. Controlla internet e riprova."); }
+    if (r.status === 401) throw new Error("Trello non accetta chiave o token. Riaprili con il pulsante Trello in alto e ricontrollali.");
+    if (r.status === 429) throw new Error("Troppe richieste a Trello. Aspetta qualche secondo e premi Aggiorna.");
+    if (!r.ok) throw new Error(`Trello ha risposto con un errore (${r.status}).`);
+    return r.json();
+  }
+
+  function setStatus(html, kind) {
+    const s = $("status");
+    if (!html) { s.hidden = true; return; }
+    s.hidden = false; s.className = "notice" + (kind === "err" ? " err" : ""); s.innerHTML = html;
+  }
+
+  async function loadBoards() {
+    setStatus('Carico le tue board <span class="spin"></span>');
+    try {
+      T.boards = await trello("/members/me/boards", { filter: "open", fields: "name,url" });
+      if (!T.boards.length) { setStatus("Non ho trovato board aperte nel tuo Trello."); return; }
+      const rem = store.get("leggio.board", null);
+      const pref = T.boards.find(b => b.id === rem) || T.boards.find(b => /video/i.test(b.name)) || T.boards[0];
+      T.boardId = pref.id;
+      const sel = $("board"); sel.innerHTML = "";
+      T.boards.forEach(b => { const o = document.createElement("option"); o.value = b.id; o.textContent = b.name; sel.appendChild(o); });
+      sel.value = T.boardId;
+      $("pickers").hidden = false; setStatus(null);
+      await loadLists();
+    } catch (e) { setStatus(esc(e.message), "err"); }
+  }
+  async function loadLists() {
+    $("lists").innerHTML = ""; $("cards").innerHTML = "";
+    try {
+      T.lists = await trello(`/boards/${T.boardId}/lists`, { filter: "open", fields: "name,pos" });
+      const rem = store.get("leggio.list." + T.boardId, null);
+      const pref = T.lists.find(l => l.id === rem) || T.lists[0];
+      T.listId = pref ? pref.id : null;
+      renderLists();
+      if (T.listId) await loadCards(); else setStatus("Questa board non ha liste aperte.");
+    } catch (e) { setStatus(esc(e.message), "err"); }
+  }
+  function renderLists() {
+    const box = $("lists"); box.innerHTML = "";
+    T.lists.forEach(l => {
+      const b = document.createElement("button");
+      b.type = "button"; b.className = "chip"; b.textContent = l.name;
+      b.setAttribute("aria-pressed", String(l.id === T.listId));
+      b.onclick = () => { if (T.listId === l.id) return; T.listId = l.id; store.set("leggio.list." + T.boardId, l.id); renderLists(); loadCards(); };
+      box.appendChild(b);
+    });
+  }
+  async function loadCards() {
+    const box = $("cards"), listId = T.listId;
+    box.innerHTML = '<div class="card empty"><h3>Carico le schede <span class="spin"></span></h3></div>';
+    try {
+      const cards = await trello(`/lists/${listId}/cards`, { fields: "name,desc,idList,url" });
+      if (listId !== T.listId) return;
+      T.cards = cards; setStatus(null); renderCards();
+    } catch (e) { if (listId === T.listId) { box.innerHTML = ""; setStatus(esc(e.message), "err"); } }
+  }
+  function renderCards() {
+    const box = $("cards"); box.innerHTML = "";
+    if (!T.cards.length) { box.innerHTML = '<div class="card empty"><h3>Nessuna scheda in questa lista.</h3></div>'; return; }
+    T.cards.forEach(c => {
+      const words = countWords(c.desc || "");
+      const b = document.createElement("button"); b.type = "button"; b.className = "card";
+      const h = document.createElement("h3"); h.textContent = c.name;
+      const m = document.createElement("span"); m.className = "meta";
+      m.textContent = words ? `${words} parole · ~${fmtMin(words / 150 * 60)}` : "senza testo";
+      const p = document.createElement("p"); p.textContent = (c.desc || "La descrizione è vuota: aggiungi il copione su Trello.").slice(0, 240);
+      b.append(h, m, p);
+      b.onclick = () => {
+        if (!(c.desc || "").trim()) { setStatus(`La scheda “${esc(c.name)}” non ha testo nella descrizione.`); window.scrollTo(0, 0); return; }
+        openPrompter(c, c.desc);
+      };
+      box.appendChild(b);
+    });
+  }
+  function sampleList(msg) {
+    if (msg) setStatus(msg);
+    const box = $("cards"); box.innerHTML = "";
+    const b = document.createElement("button"); b.type = "button"; b.className = "card";
+    b.innerHTML = `<h3>Prova il teleprompter<span class="badge">esempio</span></h3><span class="meta">${countWords(SAMPLE)} parole</span><p>${esc(SAMPLE.slice(0, 200))}</p>`;
+    b.onclick = () => openPrompter({ name: "Esempio", local: true }, SAMPLE);
+    box.appendChild(b);
+  }
+
+  // Setup panel
+  function showSetup(on) {
+    $("setup").hidden = !on;
+    if (on) { $("kKey").value = K ? K.key : ""; $("kToken").value = K ? K.token : ""; }
+  }
+  $("setupBtn").onclick = () => showSetup($("setup").hidden);
+  $("setupClose").onclick = () => showSetup(false);
+  $("authBtn").onclick = () => {
+    const key = $("kKey").value.trim();
+    if (!/^[0-9a-f]{32}$/i.test(key)) { setStatus("Incolla prima la Chiave API (32 caratteri) al passo 2.", "err"); return; }
+    const u = `https://trello.com/1/authorize?expiration=never&name=Leggio&scope=read,write&response_type=token&key=${key}`;
+    window.open(u, "_blank", "noopener");
+  };
+  $("saveKeys").onclick = async () => {
+    const key = $("kKey").value.trim(), token = $("kToken").value.trim();
+    if (!key || !token) { setStatus("Servono sia la Chiave API sia il token.", "err"); return; }
+    K = { key, token }; store.set("leggio.trello", K);
+    showSetup(false); await loadBoards();
+  };
+  $("forget").onclick = () => {
+    store.del("leggio.trello"); K = null;
+    $("kKey").value = ""; $("kToken").value = "";
+    $("pickers").hidden = true; $("lists").innerHTML = "";
+    sampleList("Trello scollegato da questo tablet.");
+  };
+
+  /* ---------------- Text ---------------- */
+  function esc(s) { return String(s).replace(/[&<>"']/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch])); }
+  const countWords = (s) => (s.replace(/\[[^\]\n]*\]/g, "").match(/[\p{L}\p{N}’']+/gu) || []).length;
+  function fmtMin(sec) { sec = Math.max(0, Math.round(sec || 0)); return Math.floor(sec / 60) + ":" + String(sec % 60).padStart(2, "0"); }
+  function inline(s) {
+    return esc(s)
+      .replace(/\[([^\]\n]{1,60})\]/g, '<span class="cue">[$1]</span>')
+      .replace(/\*\*([^*\n]+)\*\*/g, "<strong>$1</strong>")
+      .replace(/__([^_\n]+)__/g, "<strong>$1</strong>")
+      .replace(/(^|[\s(])[_*]([^_*\n]+)[_*](?=[\s).,;:!?]|$)/g, "$1<em>$2</em>");
+  }
+  function toHtml(md) {
+    return md.replace(/\r/g, "").split(/\n\s*\n/).map(b => b.trim()).filter(Boolean).map(b => {
+      if (/^#{1,6}\s/.test(b)) return "<h4>" + inline(b.replace(/^#{1,6}\s*/, "")) + "</h4>";
+      if (/^(-{3,}|\*{3,})$/.test(b)) return '<p class="cue">———</p>';
+      return "<p>" + b.split("\n").map(l => inline(l.replace(/^\s*[-*]\s+/, "• "))).join("<br>") + "</p>";
+    }).join("") + '<p class="end">— fine —</p>';
+  }
+  const norm = (w) => w.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]/g, "");
+
+  // Wrap every spoken word of the script in a span so the voice tracker can find it
+  let W = []; // [{el, n}]
+  function wrapWords() {
+    W = [];
+    const walker = document.createTreeWalker(content, NodeFilter.SHOW_TEXT, {
+      acceptNode: (n) => n.parentElement.closest(".cue, .end") ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT
+    });
+    const nodes = []; while (walker.nextNode()) nodes.push(walker.currentNode);
+    nodes.forEach(node => {
+      const parts = node.nodeValue.split(/(\s+)/);
+      const frag = document.createDocumentFragment();
+      parts.forEach(part => {
+        const n = norm(part);
+        if (!n) { frag.appendChild(document.createTextNode(part)); return; }
+        const sp = document.createElement("span"); sp.className = "w"; sp.textContent = part;
+        frag.appendChild(sp); W.push({ el: sp, n });
+      });
+      node.parentNode.replaceChild(frag, node);
+    });
+  }
+
+  /* ---------------- Voice tracking ---------------- */
+  const V = { rec: null, on: false, pos: -1, marked: -1, lastHit: 0 };
+  function lev1(a, b) { // true when edit distance <= 1
+    if (Math.abs(a.length - b.length) > 1) return false;
+    let i = 0, j = 0, d = 0;
+    while (i < a.length && j < b.length) {
+      if (a[i] === b[j]) { i++; j++; continue; }
+      if (++d > 1) return false;
+      if (a.length > b.length) i++; else if (b.length > a.length) j++; else { i++; j++; }
+    }
+    return d + (a.length - i) + (b.length - j) <= 1;
+  }
+  function eq(a, b) {
+    if (a === b) return true;
+    if (a.length >= 4 && b.length >= 4 && (a.startsWith(b) || b.startsWith(a))) return true;
+    return a.length >= 5 && b.length >= 5 && lev1(a, b);
+  }
+  const weight = (n) => n.length <= 2 ? 0.4 : n.length <= 3 ? 0.7 : 1;
+  function align(sp, j) { // match spoken words backwards from script index j
+    let i = sp.length - 1, k = j, score = 0, miss = 0;
+    while (i >= 0 && k >= 0 && j - k < 16) {
+      if (eq(sp[i], W[k].n)) { score += weight(W[k].n); i--; k--; continue; }
+      if (k > 0 && eq(sp[i], W[k - 1].n)) { k--; miss++; }
+      else if (i > 0 && eq(sp[i - 1], W[k].n)) { i--; miss++; }
+      else { i--; k--; miss++; }
+      if (miss > 4) break;
+    }
+    return score;
+  }
+  function locate(sp) {
+    if (!sp.length || !W.length) return;
+    const tries = sp.length > 2 ? [sp, sp.slice(0, -1)] : [sp];
+    const search = (lo, hi, min) => {
+      let best = null;
+      for (let j = lo; j <= hi; j++) for (const s of tries) {
+        if (!eq(s[s.length - 1], W[j].n)) continue;
+        const sc = align(s, j) - Math.abs(j - V.pos) * 0.015 - (j < V.pos ? 1 : 0);
+        if (sc >= min && (!best || sc > best.sc)) best = { j, sc };
+      }
+      return best;
+    };
+    let hit = search(Math.max(0, V.pos - 10), Math.min(W.length - 1, V.pos + 45), 1.6);
+    if (!hit && sp.length >= 4) hit = search(0, W.length - 1, 3.2); // you jumped far: search the whole script
+    if (hit && hit.j !== V.pos) { V.pos = hit.j; V.lastHit = performance.now(); markRead(); }
+  }
+  function markRead() {
+    const to = V.pos;
+    if (V.marked >= 0 && W[V.marked]) W[V.marked].el.classList.remove("here");
+    if (to > V.marked) for (let i = Math.max(0, V.marked); i <= to; i++) W[i].el.classList.add("done");
+    else for (let i = to + 1; i <= V.marked; i++) W[i].el.classList.remove("done");
+    if (W[to]) W[to].el.classList.add("here");
+    V.marked = to;
+  }
+  function resetRead() { W.forEach(w => w.el.classList.remove("done", "here")); V.pos = -1; V.marked = -1; }
+
+  function startVoice() {
+    if (!SR) { setReady("Questo browser non riconosce la voce: usa Chrome su Android."); return false; }
+    if (!V.rec) {
+      const r = new SR();
+      r.lang = "it-IT"; r.continuous = true; r.interimResults = true; r.maxAlternatives = 1;
+      r.onresult = (e) => {
+        let txt = "";
+        for (let i = Math.max(0, e.results.length - 3); i < e.results.length; i++) txt += " " + e.results[i][0].transcript;
+        const sp = txt.split(/\s+/).map(norm).filter(Boolean).slice(-8);
+        if (S.heard) $("heard").innerHTML = '<span class="dot"></span>' + esc(txt.trim().split(/\s+/).slice(-10).join(" "));
+        locate(sp);
+      };
+      r.onerror = (e) => {
+        if (e.error === "not-allowed" || e.error === "service-not-allowed") { V.on = false; stopAll(); setReady("Microfono negato. Consenti il microfono a questo sito nelle impostazioni di Chrome e riprova."); }
+        else if (e.error === "network") { setReady("Il riconoscimento vocale ha bisogno di internet."); }
+        else if (e.error === "audio-capture") { V.on = false; stopAll(); setReady("Nessun microfono disponibile."); }
+      };
+      r.onend = () => { if (V.on) setTimeout(() => { if (V.on) try { r.start(); } catch {} }, 150); };
+      V.rec = r;
+    }
+    V.on = true;
+    try { V.rec.start(); } catch {}
+    if (S.heard) $("heard").innerHTML = '<span class="dot"></span>In ascolto…';
+    return true;
+  }
+  function stopVoice() { V.on = false; try { V.rec && V.rec.stop(); } catch {} $("heard").textContent = ""; }
+
+  /* ---------------- Prompter engine ---------------- */
+  const stage = $("stage"), mirror = $("mirror"), content = $("content");
+  const P = { offset: 0, playing: false, last: 0, elapsed: 0, counting: null, drag: null, manualUntil: 0 };
+  let wakeLock = null;
+
+  function setReady(t) { const r = $("ready"); r.textContent = t || ""; r.hidden = !t; }
+  function idleHint() { setReady(S.mode === "voice" ? "Premi AVVIA e comincia a leggere" : "Tocca il testo o premi spazio per partire"); }
+
+  function openPrompter(card, text) {
+    T.card = card; T.text = text;
+    content.innerHTML = toHtml(text); wrapWords(); resetRead();
+    $("lib").hidden = true; $("prompter").hidden = false;
+    $("moveBtn").hidden = !(K && card && card.id && !card.local);
+    P.offset = 0; P.elapsed = 0; stopAll(); idleHint();
+    applyStyle(); requestWake();
+  }
+  function closePrompter() {
+    stopAll(); cancelCount();
+    ["settings", "moveSheet", "editSheet"].forEach(id => $(id).hidden = true);
+    $("prompter").hidden = true; $("lib").hidden = false;
+    releaseWake();
+    if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
+  }
+
+  const pxPerSec = () => S.speed * S.size * 0.11;
+  const maxOffset = () => Math.max(0, content.offsetHeight - stage.clientHeight);
+  function voiceTarget() {
+    if (V.pos < 0 || !W[V.pos]) return 0;
+    return W[V.pos].el.offsetTop - stage.clientHeight * S.guidePos + S.size * 0.6;
+  }
+
+  function applyStyle() {
+    const h = stage.clientHeight || window.innerHeight;
+    content.style.fontSize = S.size + "px";
+    content.style.lineHeight = S.line;
+    content.style.width = S.width + "%";
+    content.style.paddingTop = Math.round(h * S.guidePos - S.size * 0.6) + "px";
+    content.style.paddingBottom = Math.round(h * (1 - S.guidePos)) + "px";
+    content.classList.toggle("novoice", !S.dim || S.mode !== "voice");
+    const g = $("guide"); g.hidden = !S.showGuide;
+    g.style.top = (S.flip ? (1 - S.guidePos) * 100 : S.guidePos * 100) + "%";
+    mirror.style.transform = `scale(${S.mirror ? -1 : 1}, ${S.flip ? -1 : 1})`;
+    $("vSpeed").textContent = S.speed.toFixed(1).replace(/\.0$/, "");
+    $("vSize").textContent = S.size;
+    $("mirrorBtn").setAttribute("aria-pressed", String(S.mirror));
+    $("modeVoice").setAttribute("aria-pressed", String(S.mode === "voice"));
+    $("modeAuto").setAttribute("aria-pressed", String(S.mode === "auto"));
+    $("speedGrp").hidden = S.mode === "voice";
+    $("heard").hidden = !(S.heard && S.mode === "voice");
+    syncForm(); clamp(); render();
+  }
+  const clamp = () => { P.offset = Math.min(Math.max(0, P.offset), maxOffset()); };
+  function render() {
+    content.style.transform = `translate3d(0, ${-P.offset}px, 0)`;
+    const m = maxOffset();
+    $("progress").style.width = (m ? P.offset / m * 100 : 0) + "%";
+    $("tEl").textContent = fmtMin(P.elapsed);
+    if (S.mode === "voice") {
+      const left = W.length - Math.max(0, V.pos + 1);
+      $("tLeft").textContent = "-" + fmtMin(left / 150 * 60);
+    } else $("tLeft").textContent = "-" + fmtMin((m - P.offset) / pxPerSec());
+  }
+  function frame(t) {
+    const dt = Math.min(0.1, (t - P.last) / 1000); P.last = t;
+    if (P.playing) {
+      P.elapsed += dt;
+      if (S.mode === "auto") {
+        P.offset += pxPerSec() * dt;
+        if (P.offset >= maxOffset()) { P.offset = maxOffset(); stopAll(); }
+      } else if (!P.drag && t > P.manualUntil && V.pos >= 0) {
+        const target = Math.min(maxOffset(), Math.max(0, voiceTarget()));
+        P.offset += (target - P.offset) * Math.min(1, dt * 3.5);
+      }
+      render();
+    }
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+
+  function begin() {
+    P.playing = true; $("prompter").classList.add("playing");
+    $("play").textContent = S.mode === "voice" ? "STOP" : "PAUSA";
+    setReady("");
+    if (S.mode === "voice" && !startVoice()) stopAll();
+  }
+  function play() {
+    if (S.mode === "auto" && P.offset >= maxOffset()) P.offset = 0;
+    if (S.countdown && P.offset === 0 && P.elapsed === 0) return countdown();
+    begin();
+  }
+  function stopAll() {
+    P.playing = false; $("prompter").classList.remove("playing");
+    stopVoice();
+    $("play").textContent = (P.offset > 0 || V.pos >= 0) ? "RIPRENDI" : "AVVIA";
+  }
+  function toggle() { if (P.counting) { cancelCount(); return; } P.playing ? stopAll() : play(); }
+  function countdown() {
+    let n = 3; const el = $("count"); el.hidden = false; el.textContent = n; setReady("");
+    if (S.mode === "voice") startVoice(); // warm up the mic during the countdown
+    P.counting = setInterval(() => {
+      n--;
+      if (n <= 0) { cancelCount(true); P.elapsed = 0.0001; begin(); } else el.textContent = n;
+    }, 1000);
+  }
+  function cancelCount(keepVoice) { if (P.counting) clearInterval(P.counting); P.counting = null; $("count").hidden = true; if (!keepVoice && !P.playing) stopVoice(); }
+  function restart() { cancelCount(); stopAll(); P.offset = 0; P.elapsed = 0; resetRead(); $("play").textContent = "AVVIA"; idleHint(); render(); }
+  // Manual move in voice mode: re-anchor the tracker to the word now on the reading line
+  function anchorToLine() {
+    if (S.mode !== "voice" || !W.length) return;
+    const y = P.offset + stage.clientHeight * S.guidePos;
+    let j = W.findIndex(w => w.el.offsetTop + w.el.offsetHeight >= y);
+    if (j < 0) j = W.length - 1;
+    V.pos = Math.max(-1, j - 1); markRead();
+    P.manualUntil = performance.now() + 400;
+  }
+  function jump(dir) { P.offset += dir * stage.clientHeight * 0.4; clamp(); anchorToLine(); render(); }
+  function speed(d) { S.speed = Math.round(Math.min(20, Math.max(0.5, S.speed + d)) * 2) / 2; saveS(); applyStyle(); }
+  function size(d) {
+    const ratio = maxOffset() ? P.offset / maxOffset() : 0;
+    S.size = Math.min(160, Math.max(24, S.size + d)); saveS(); applyStyle();
+    P.offset = ratio * maxOffset(); render();
+  }
+  function setMode(m) {
+    if (m === "voice" && !SR) { setReady("Questo browser non riconosce la voce: usa Chrome su Android."); return; }
+    const was = P.playing; stopAll(); cancelCount();
+    S.mode = m; saveS();
+    if (m === "voice") anchorToLine();
+    applyStyle(); if (was) begin(); else idleHint();
+  }
+
+  stage.addEventListener("pointerdown", (e) => {
+    if (e.button && e.button !== 0) return;
+    P.drag = { y: e.clientY, start: P.offset, moved: false };
+    stage.setPointerCapture?.(e.pointerId);
+  });
+  stage.addEventListener("pointermove", (e) => {
+    if (!P.drag) return;
+    const dy = e.clientY - P.drag.y;
+    if (Math.abs(dy) > 6) P.drag.moved = true;
+    if (P.drag.moved) { P.offset = P.drag.start - dy * (S.flip ? -1 : 1); clamp(); render(); }
+  });
+  stage.addEventListener("pointerup", () => { if (!P.drag) return; const d = P.drag; P.drag = null; if (d.moved) anchorToLine(); else toggle(); });
+  stage.addEventListener("pointercancel", () => { P.drag = null; });
+  stage.addEventListener("wheel", (e) => { e.preventDefault(); P.offset += e.deltaY * (S.flip ? -1 : 1); clamp(); anchorToLine(); render(); }, { passive: false });
+
+  document.addEventListener("keydown", (e) => {
+    if ($("prompter").hidden) return;
+    if (e.target.closest && e.target.closest("textarea, select, input")) return;
+    const flipM = () => { S.mirror = !S.mirror; saveS(); applyStyle(); };
+    const map = {
+      " ": toggle, "Enter": toggle, "MediaPlayPause": toggle,
+      "ArrowUp": () => speed(0.5), "ArrowDown": () => speed(-0.5),
+      "PageDown": () => jump(1), "PageUp": () => jump(-1), "ArrowRight": () => jump(1), "ArrowLeft": () => jump(-1),
+      "+": () => size(4), "=": () => size(4), "-": () => size(-4),
+      "m": flipM, "M": flipM, "v": () => setMode(S.mode === "voice" ? "auto" : "voice"), "V": () => setMode(S.mode === "voice" ? "auto" : "voice"),
+      "Home": restart, "Escape": closePrompter
+    };
+    if (map[e.key]) { e.preventDefault(); if (e.target.tagName === "BUTTON") e.target.blur(); map[e.key](); }
+  });
+
+  $("play").onclick = toggle;
+  $("restart").onclick = restart;
+  $("exit").onclick = closePrompter;
+  $("modeVoice").onclick = () => setMode("voice");
+  $("modeAuto").onclick = () => setMode("auto");
+  $("faster").onclick = () => speed(0.5);
+  $("slower").onclick = () => speed(-0.5);
+  $("bigger").onclick = () => size(4);
+  $("smaller").onclick = () => size(-4);
+  $("mirrorBtn").onclick = () => { S.mirror = !S.mirror; saveS(); applyStyle(); };
+  const openSheet = (id) => { ["settings", "moveSheet", "editSheet"].forEach(s => $(s).hidden = s !== id ? true : !$(s).hidden); };
+  $("setBtn").onclick = () => openSheet("settings");
+  $("editBtn").onclick = () => { stopAll(); $("editText").value = T.text; openSheet("editSheet"); };
+  document.querySelectorAll("[data-close]").forEach(b => b.onclick = () => { $(b.dataset.close).hidden = true; });
+  $("editGo").onclick = () => {
+    T.text = $("editText").value; content.innerHTML = toHtml(T.text); wrapWords();
+    $("editSheet").hidden = true; applyStyle(); anchorToLine();
+  };
+  $("fsBtn").onclick = () => {
+    if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
+    else document.documentElement.requestFullscreen?.().catch(() => {});
+  };
+
+  const ranges = [["sSize", "size", "oSize", v => v + "px"], ["sLine", "line", "oLine", v => (+v).toFixed(2)], ["sWidth", "width", "oWidth", v => v + "%"], ["sGuide", "guidePos", "oGuide", v => Math.round(v * 100) + "%"]];
+  const checks = [["sMirror", "mirror"], ["sFlip", "flip"], ["sShowGuide", "showGuide"], ["sCount", "countdown"], ["sDim", "dim"], ["sHeard", "heard"]];
+  function syncForm() {
+    ranges.forEach(([id, key, out, f]) => { $(id).value = S[key]; $(out).textContent = f(S[key]); });
+    checks.forEach(([id, key]) => { $(id).checked = !!S[key]; });
+  }
+  ranges.forEach(([id, key]) => $(id).addEventListener("input", (e) => { S[key] = +e.target.value; saveS(); applyStyle(); }));
+  checks.forEach(([id, key]) => $(id).addEventListener("change", (e) => { S[key] = e.target.checked; saveS(); applyStyle(); }));
+  window.addEventListener("resize", () => { if (!$("prompter").hidden) applyStyle(); });
+
+  async function requestWake() { try { wakeLock = await navigator.wakeLock?.request("screen"); } catch { wakeLock = null; } }
+  function releaseWake() { try { wakeLock?.release(); } catch {} wakeLock = null; }
+  document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible" && !$("prompter").hidden) requestWake(); });
+
+  $("moveBtn").onclick = () => {
+    stopAll();
+    const sel = $("moveDest"); sel.innerHTML = "";
+    const others = T.lists.filter(l => l.id !== (T.card.idList || T.listId));
+    others.forEach(l => { const o = document.createElement("option"); o.value = l.id; o.textContent = l.name; sel.appendChild(o); });
+    const pref = others.find(l => /^registrat/i.test(l.name)) || others[0];
+    if (pref) sel.value = pref.id;
+    $("moveCard").textContent = "“" + T.card.name + "”";
+    $("moveMsg").textContent = ""; $("moveGo").disabled = !others.length;
+    openSheet("moveSheet");
+  };
+  $("moveGo").onclick = async () => {
+    const dest = $("moveDest").value; if (!dest) return;
+    const destName = (T.lists.find(l => l.id === dest) || {}).name || "";
+    $("moveGo").disabled = true; $("moveMsg").innerHTML = 'Sposto la scheda <span class="spin"></span>';
+    try {
+      await trello(`/cards/${T.card.id}`, { idList: dest, pos: "top" }, "PUT");
+      $("moveMsg").textContent = "Spostata in “" + destName + "”.";
+      T.card.idList = dest;
+      T.cards = T.cards.filter(c => c.id !== T.card.id); renderCards();
+      setTimeout(() => { $("moveSheet").hidden = true; $("moveGo").disabled = false; }, 1400);
+    } catch (e) { $("moveMsg").textContent = e.message; $("moveGo").disabled = false; }
+  };
+
+  $("board").onchange = (e) => { T.boardId = e.target.value; store.set("leggio.board", T.boardId); loadLists(); };
+  $("reload").onclick = () => { if (K) loadBoards(); };
+  $("pasteBtn").onclick = () => { $("pasteBox").hidden = false; $("pasteText").focus(); };
+  $("pasteCancel").onclick = () => { $("pasteBox").hidden = true; };
+  $("pasteGo").onclick = () => { const t = $("pasteText").value.trim(); if (t) openPrompter({ name: "Testo incollato", local: true }, t); };
+
+  // Boot
+  if (!window.isSecureContext) setStatus("Apri questa pagina da un indirizzo https: altrimenti il microfono non funziona.", "err");
+  else if (!SR) setStatus("Questo browser non riconosce la voce. Su Android usa Chrome; intanto funziona lo scorrimento automatico.", "err");
+  if (K) loadBoards();
+  else { sampleList(); showSetup(true); }
+})();
+</script>
+</body>
+</html>
